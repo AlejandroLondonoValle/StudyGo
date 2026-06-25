@@ -1,5 +1,10 @@
-﻿document.addEventListener('DOMContentLoaded', function () {
+﻿// ============================================================================
+// StudyGo · wwwroot/js/calendar.js
+// ============================================================================
+document.addEventListener('DOMContentLoaded', function () {
     var calendarEl = document.getElementById('calendar');
+
+    if (!calendarEl) return;
 
     var calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
@@ -19,12 +24,9 @@
         firstDay: 1,
         events: '/Calendar/GetEvents',
         eventClick: function (info) {
-            // Reutiliza el sistema de modales existente del layout general (Micky)
             const eventData = info.event.extendedProps;
-            const msg = `Detalles: ${info.event.title}\nTipo: ${eventData.type}\nCurso: ${eventData.course}`;
+            const msg = `Detalles: ${info.event.title}\nCurso ID: ${eventData.courseId}`;
 
-            // En un caso real abriríamos un modal usando openModal('eventoDetalle')
-            // Por simplicidad, usamos Toastify temporalmente
             if (typeof showToast === "function") {
                 showToast(msg, "info");
             }

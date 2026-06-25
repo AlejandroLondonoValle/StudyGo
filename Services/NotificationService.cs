@@ -1,100 +1,127 @@
+﻿// ============================================================================
+// StudyGo · Services/NotificationService.cs
 // ============================================================================
-// StudyGo · Services/INotificationService.cs + NotificationService.cs
-// ============================================================================
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using StudyGo.Data;
+using StudyGo.Hubs;
 using StudyGo.Models;
 using StudyGo.ViewModels.Notifications;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace StudyGo.Services
 {
-    public interface INotificationService
-    {
-        Task<NotificationDropdownViewModel> GetDropdownAsync(Guid userId, int take = 10);
-        Task<int> GetUnreadCountAsync(Guid userId);
-        Task MarkAsReadAsync(Guid notificationId, Guid userId);
-        Task MarkAllAsReadAsync(Guid userId);
-        Task<NotificationItemViewModel> CreateAsync(Guid userId, string type, string message, string? link = null);
-    }
-
     public class NotificationService : INotificationService
     {
-        private readonly AppDbContext _db;
+        private readonly AppDbContext _context;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
-        public NotificationService(AppDbContext db) => _db = db;
-
-        public async Task<NotificationDropdownViewModel> GetDropdownAsync(Guid userId, int take = 10)
+        public NotificationService(AppDbContext context, IHubContext<NotificationHub> hubContext)
         {
-            var total = take + 1; // pedimos uno extra para saber si hay más
-            var items = await _db.Notifications
+            _context = context;
+            _hubContext = hubContext;
+        }
+
+        public async Task<NotificationListViewModel> GetNotificationsAsync(Guid userId)
+        {
+            var notifications = await _context.Notifications
                 .Where(n => n.UserId == userId)
                 .OrderByDescending(n => n.CreatedAt)
-                .Take(total)
                 .ToListAsync();
 
-            var hasMore = items.Count > take;
-            if (hasMore) items = items.Take(take).ToList();
-
-            var unread = await _db.Notifications
-                .CountAsync(n => n.UserId == userId && !n.IsRead);
-
-            return new NotificationDropdownViewModel
+            return new NotificationListViewModel
             {
-                Items = items.Select(ToViewModel).ToList(),
-                UnreadCount = unread,
-                HasMore = hasMore,
+                UnreadCount = notifications.Count(n => !n.IsRead),
+                Notifications = notifications.Select(n => new NotificationItemViewModel
+                {
+                    Id = n.Id,
+                    Type = n.Type,
+                    Message = n.Message,
+                    Link = n.Link ?? "/",
+                    IsRead = n.IsRead,
+                    CreatedAt = n.CreatedAt,
+                    TimeRelative = CalcularTiempoRelativo(n.CreatedAt)
+                }).ToList()
             };
         }
 
-        public async Task<int> GetUnreadCountAsync(Guid userId) =>
-            await _db.Notifications.CountAsync(n => n.UserId == userId && !n.IsRead);
-
-        public async Task MarkAsReadAsync(Guid notificationId, Guid userId)
+        public async Task<NotificationDropdownViewModel> GetDropdownAsync(Guid userId)
         {
-            var n = await _db.Notifications.FirstOrDefaultAsync(x => x.Id == notificationId && x.UserId == userId);
-            if (n is null || n.IsRead) return;
-            n.IsRead = true;
-            await _db.SaveChangesAsync();
+            var notifications = await _context.Notifications
+                .Where(n => n.UserId == userId)
+                .OrderByDescending(n => n.CreatedAt)
+                .Take(6)
+                .ToListAsync();
+
+            var unreadCount = await _context.Notifications.CountAsync(n => n.UserId == userId && !n.IsRead);
+
+            return new NotificationDropdownViewModel
+            {
+                UnreadCount = unreadCount,
+                Items = notifications.Take(5).Select(n => new NotificationItemViewModel
+                {
+                    Id = n.Id,
+                    Type = n.Type,
+                    Message = n.Message,
+                    Link = n.Link ?? "/",
+                    IsRead = n.IsRead,
+                    CreatedAt = n.CreatedAt,
+                    TimeRelative = CalcularTiempoRelativo(n.CreatedAt)
+                }).ToList(),
+                HasMore = notifications.Count > 5
+            };
+        }
+
+        public async Task MarkAsReadAsync(Guid notificationId)
+        {
+            var notification = await _context.Notifications.FindAsync(notificationId);
+            if (notification != null && !notification.IsRead)
+            {
+                notification.IsRead = true;
+                await _context.SaveChangesAsync();
+            }
         }
 
         public async Task MarkAllAsReadAsync(Guid userId)
         {
-            var unread = await _db.Notifications
+            var unread = await _context.Notifications
                 .Where(n => n.UserId == userId && !n.IsRead)
                 .ToListAsync();
-            foreach (var n in unread) n.IsRead = true;
-            await _db.SaveChangesAsync();
-        }
 
-        public async Task<NotificationItemViewModel> CreateAsync(Guid userId, string type, string message, string? link = null)
-        {
-            var entity = new Notification
+            if (unread.Any())
             {
-                Id = Guid.NewGuid(),
-                UserId = userId,
-                Type = type,
-                Message = message,
-                Link = link,
-                IsRead = false,
-                CreatedAt = DateTime.UtcNow,
-            };
-            _db.Notifications.Add(entity);
-            await _db.SaveChangesAsync();
-            return ToViewModel(entity);
+                foreach (var notif in unread) notif.IsRead = true;
+                await _context.SaveChangesAsync();
+            }
         }
 
-        private static NotificationItemViewModel ToViewModel(Notification n) => new()
+        public async Task CreateNotificationAsync(Notification notification)
         {
-            Id = n.Id,
-            Type = n.Type,
-            Message = n.Message,
-            Link = n.Link,
-            IsRead = n.IsRead,
-            CreatedAt = n.CreatedAt,
-        };
+            _context.Notifications.Add(notification);
+            await _context.SaveChangesAsync();
+
+            var unreadCount = await _context.Notifications.CountAsync(n => n.UserId == notification.UserId && !n.IsRead);
+
+            // Envío SignalR mapeado al Id de usuario en texto
+            await _hubContext.Clients.User(notification.UserId.ToString()).SendAsync("ReceiveNotification", new
+            {
+                type = notification.Type,
+                message = notification.Message,
+                unreadCount = unreadCount
+            });
+        }
+
+        private string CalcularTiempoRelativo(DateTime fecha)
+        {
+            var span = DateTime.Now - fecha;
+            if (span.Days > 365) return $"Hace {span.Days / 365} años";
+            if (span.Days > 30) return $"Hace {span.Days / 30} meses";
+            if (span.Days > 0) return $"Hace {span.Days}d";
+            if (span.Hours > 0) return $"Hace {span.Hours}h";
+            if (span.Minutes > 0) return $"Hace {span.Minutes}m";
+            return "Justo ahora";
+        }
     }
 }

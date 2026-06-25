@@ -1,12 +1,25 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿// ============================================================================
+// StudyGo · Controllers/CalendarController.cs
+// ============================================================================
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Collections.Generic;
+using StudyGo.Services;
+using System;
+using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace StudyGo.Controllers
 {
     [Authorize]
     public class CalendarController : Controller
     {
+        private readonly ICalendarService _calendarService;
+
+        public CalendarController(ICalendarService calendarService)
+        {
+            _calendarService = calendarService;
+        }
+
         [HttpGet]
         public IActionResult Index()
         {
@@ -14,27 +27,12 @@ namespace StudyGo.Controllers
         }
 
         [HttpGet]
-        public IActionResult GetEvents(string start, string end)
+        public async Task<IActionResult> GetEvents(DateTime start, DateTime end)
         {
-            // TODO: Consumir Application Service filtrando por fechas y curso/usuario
-            var events = new List<object>
-            {
-                new {
-                    id = "1",
-                    title = "Entrega: Tarea Java",
-                    start = "2026-06-25T23:59:00",
-                    className = "event-warning",
-                    extendedProps = new { type = "entrega", course = "Programación II" }
-                },
-                new {
-                    id = "2",
-                    title = "Quiz: Álgebra Booleana",
-                    start = "2026-06-26T10:00:00",
-                    end = "2026-06-26T12:00:00",
-                    className = "event-purple",
-                    extendedProps = new { type = "examen", course = "Matemáticas Discretas" }
-                }
-            };
+            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdString, out Guid userId)) return Unauthorized();
+
+            var events = await _calendarService.GetEventsAsync(userId, start, end);
             return Json(events);
         }
     }

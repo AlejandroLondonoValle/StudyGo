@@ -5,36 +5,37 @@
 }
 
 <div class="space-y-8">
-    <!-- Header de Página -->
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-dark-border pb-6">
-        <div>
-            <div class="eyebrow mb-1">Académico</div>
-            <h1 class="text-3xl font-extrabold tracking-tight text-white font-title text-gradient">Mis Cursos</h1>
-            <p class="text-sm text-dark-muted mt-1">Administra tus asignaturas y revisa tu rendimiento general.</p>
-        </div>
-        <div class="flex items-center gap-3">
-            @if (Model.Role == "Estudiante" || Model.Role == "Administrador")
-            {
-                <a asp-action="Explorar" class="btn btn-md btn-secondary">
-                    <i class="fa-solid fa-magnifying-glass text-xs"></i> Explorar cursos
-                </a>
-            }
-            @if (User.IsInRole("Administrador") || User.IsInRole("Docente"))
-            {
-                <a asp-action="Crear" class="btn btn-md btn-primary">
-                    <i class="fa-solid fa-plus text-xs"></i> Nuevo Curso
-                </a>
-            }
-        </div>
+   <!-- Header de Página -->
+<div class="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-dark-border pb-6 mb-6 text-left items-start">
+    <div class="text-left items-start flex flex-col">
+        <div class="eyebrow mb-1 text-xs font-semibold uppercase tracking-wider text-brand-primary">Académico</div>
+        <h1 class="text-3xl font-extrabold tracking-tight text-white font-title text-gradient">Mis Cursos</h1>
+        <p class="text-sm text-dark-muted mt-1">Administra tus asignaturas y revisa tu rendimiento general.</p>
     </div>
+    
+    <div class="flex flex-wrap items-center justify-start sm:justify-end gap-3 w-full sm:w-auto mt-2 sm:mt-0">
+        @if (Model.Role == "Estudiante" || Model.Role == "Administrador")
+        {
+            <a asp-action="Explorar" class="btn btn-md btn-secondary inline-flex items-center gap-2">
+                <i class="fa-solid fa-magnifying-glass text-xs"></i> Explorar cursos
+            </a>
+        }
+        @if (User.IsInRole("Administrador") || User.IsInRole("Docente"))
+        {
+            <a asp-action="Crear" class="btn btn-md btn-primary inline-flex items-center gap-2">
+                <i class="fa-solid fa-plus text-xs"></i> Nuevo Curso
+            </a>
+        }
+    </div>
+</div>
 
-    @if (TempData["SuccessMessage"] != null)
-    {
-        <div class="flex items-center gap-3 p-4 rounded-xl bg-brand-mint/10 border border-brand-mint/20 text-brand-mint text-sm">
-            <i class="fa-solid fa-circle-check"></i>
-            <span>@TempData["SuccessMessage"]</span>
-        </div>
-    }
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="flex items-center gap-3 p-4 mb-6 rounded-xl bg-brand-mint/10 border border-brand-mint/20 text-brand-mint text-sm w-full text-left">
+        <i class="fa-solid fa-circle-check"></i>
+        <span>@TempData["SuccessMessage"]</span>
+    </div>
+}
 
     <!-- Panel de Métricas / Resumen -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">

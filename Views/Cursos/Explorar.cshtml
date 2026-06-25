@@ -6,23 +6,30 @@
 
 <div class="space-y-8">
     <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-dark-border pb-6">
-        <div>
-            <div class="flex items-center gap-2 mb-2">
-                <a asp-action="Index" class="text-xs text-dark-muted hover:text-white transition-colors">Mis Cursos</a>
-                <span class="text-xs text-dark-muted">/</span>
-                <span class="text-xs text-brand-blue font-mono">Explorar</span>
-            </div>
-            <div class="eyebrow mb-1">Catálogo académico</div>
-            <h1 class="text-3xl font-extrabold tracking-tight text-white font-title text-gradient">Explorar Cursos</h1>
-            <p class="text-sm text-dark-muted mt-1">
-                Encuentra cursos disponibles e inscríbete para comenzar a aprender.
-            </p>
+<div class="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-dark-border pb-6 mb-6 text-left items-start">
+    <div class="text-left items-start flex flex-col w-full sm:w-auto">
+        <!-- Breadcrumbs -->
+        <div class="flex items-center justify-start gap-2 mb-2 text-xs">
+            <a asp-action="Index" class="text-dark-muted hover:text-white transition-colors">Mis Cursos</a>
+            <span class="text-dark-muted">/</span>
+            <span class="text-brand-blue font-mono font-medium">Explorar</span>
         </div>
-        <a asp-action="Index" class="btn btn-md btn-secondary self-start md:self-auto">
-            <i class="fa-solid fa-arrow-left text-xs"></i> Mis Cursos
-        </a>
+        
+        <!-- Subtítulo e Indicador -->
+        <div class="eyebrow mb-1 text-xs font-semibold uppercase tracking-wider text-brand-primary">Catálogo académico</div>
+        
+        <!-- Título Principal -->
+        <h1 class="text-3xl font-extrabold tracking-tight text-white font-title text-gradient leading-tight">Explorar Cursos</h1>
+        <p class="text-sm text-dark-muted mt-1">
+            Encuentra cursos disponibles e inscríbete para comenzar a aprender.
+        </p>
     </div>
+    
+    <!-- Botón de Regreso -->
+    <a asp-action="Index" class="btn btn-md btn-secondary inline-flex items-center justify-center gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+        <i class="fa-solid fa-arrow-left text-xs"></i> <span>Mis Cursos</span>
+    </a>
+</div>
 
     @if (TempData["SuccessMessage"] != null)
     {

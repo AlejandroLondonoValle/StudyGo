@@ -268,51 +268,59 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-dark-border/40 text-xs">
-                            @foreach (var file in Model.Materials)
-                            {
-                                <tr class="hover:bg-dark-elev/40 transition">
-                                    <td class="p-4 flex items-center gap-3 font-medium text-gray-200">
-                                        <!-- Selector de Icono por extensión -->
-                                        @if (file.Name.EndsWith(".pdf"))
-                                        {
-                                            <i class="fa-solid fa-file-pdf text-red-400 text-base"></i>
-                                        }
-                                        else if (file.Name.EndsWith(".zip") || file.Name.EndsWith(".rar"))
-                                        {
-                                            <i class="fa-solid fa-file-zipper text-yellow-400 text-base"></i>
-                                        }
-                                        else if (file.Name.EndsWith(".doc") || file.Name.EndsWith(".docx"))
-                                        {
-                                            <i class="fa-solid fa-file-word text-blue-400 text-base"></i>
-                                        }
-                                        else
-                                        {
-                                            <i class="fa-solid fa-file text-brand-blue text-base"></i>
-                                        }
-                                        <a href="@file.Url" target="_blank" class="hover:underline">@file.Name</a>
-                                    </td>
-                                    <td class="p-4 text-dark-muted font-mono text-[10px]">Google Drive</td>
-                                    <td class="p-4 text-dark-muted">@file.OwnerName</td>
-                                    <td class="p-4 text-right">
-                                        <div class="flex justify-end gap-2">
-                                            <a href="@file.Url" target="_blank" class="btn btn-sm btn-ghost p-1.5" title="Abrir">
-                                                <i class="fa-solid fa-external-link"></i>
-                                            </a>
-                                            @if (Model.Role == "Docente" || Model.Role == "Administrador")
-                                            {
-                                                <form asp-action="RemoveFile" method="post" class="inline">
-                                                    <input type="hidden" name="courseId" value="@Model.Id" />
-                                                    <input type="hidden" name="fileId" value="@file.Id" />
-                                                    <button type="submit" class="btn btn-sm btn-ghost text-red-400 hover:bg-red-500/10 p-1.5" title="Eliminar">
-                                                        <i class="fa-solid fa-trash-can"></i>
-                                                    </button>
-                                                </form>
-                                            }
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
+    @foreach (var file in Model.Materials)
+    {
+        <tr class="hover:bg-dark-elev/40 transition">
+            <td class="p-4 flex items-center gap-3 font-medium text-gray-200">
+                @if (file.Name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                {
+                    <i class="fa-solid fa-file-pdf text-red-400 text-base"></i>
+                }
+                else if (file.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) || file.Name.EndsWith(".rar", StringComparison.OrdinalIgnoreCase))
+                {
+                    <i class="fa-solid fa-file-zipper text-yellow-400 text-base"></i>
+                }
+                else if (file.Name.EndsWith(".doc", StringComparison.OrdinalIgnoreCase) || 
+                         file.Name.EndsWith(".docx", StringComparison.OrdinalIgnoreCase) || 
+                         (!string.IsNullOrEmpty(file.Url) && file.Url.Contains("/document/")))
+                {
+                    <i class="fa-solid fa-file-word text-blue-400 text-base"></i>
+                }
+                else if (file.Name.EndsWith(".xls", StringComparison.OrdinalIgnoreCase) || 
+                         file.Name.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase) || 
+                         (!string.IsNullOrEmpty(file.Url) && file.Url.Contains("/spreadsheets/")))
+                {
+                    <i class="fa-solid fa-file-excel text-green-400 text-base"></i>
+                }
+                else
+                {
+                    <i class="fa-solid fa-file text-brand-blue text-base"></i>
+                }
+                
+                <a href="@file.Url" target="_blank" class="hover:underline transition-all">@file.Name</a>
+            </td>
+            <td class="p-4 text-dark-muted font-mono text-[10px]">Google Drive</td>
+            <td class="p-4 text-dark-muted">@file.OwnerName</td>
+            <td class="p-4 text-right">
+                <div class="flex justify-end gap-2">
+                    <a href="@file.Url" target="_blank" class="btn btn-sm btn-ghost p-1.5" title="Abrir">
+                        <i class="fa-solid fa-external-link"></i>
+                    </a>
+                    @if (Model.Role == "Docente" || Model.Role == "Administrador")
+                    {
+                        <form asp-action="RemoveFile" method="post" class="inline">
+                            <input type="hidden" name="courseId" value="@Model.Id" />
+                            <input type="hidden" name="fileId" value="@file.Id" />
+                            <button type="submit" class="btn btn-sm btn-ghost text-red-400 hover:bg-red-500/10 p-1.5" title="Eliminar">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </form>
+                    }
+                </div>
+            </td>
+        </tr>
+    }
+</tbody>
                     </table>
                 </div>
             }
@@ -376,7 +384,6 @@
 </div>
 
 <!-- ================= MODALES DE SIMULACIÓN ================= -->
-<!-- Modal Selector de Google Drive -->
 <div id="driveSelectorModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-dark-bg/80 backdrop-blur-sm opacity-0 transition-opacity duration-300" data-modal>
     <div class="glass-panel w-full max-w-lg p-6 rounded-3xl scale-95 transition-transform duration-300" data-modal-content>
         <div class="flex justify-between items-center pb-4 border-b border-dark-border">
@@ -390,29 +397,28 @@
             <p class="text-xs text-dark-muted">Selecciona un archivo de tu almacenamiento en Google Drive para compartir con la clase:</p>
             
             <div class="space-y-2 max-h-60 overflow-y-auto pr-1">
-                <!-- Archivos simulados de Drive -->
-                <button type="button" onclick="selectDriveFile('ProyectoFinal_Guia.pdf', 'https://drive.google.com/file/d/proj_final_guia')"
+                <button type="button" onclick="selectDriveFile('Métodos de C#', 'https://docs.google.com/document/d/1MekrRAVZVSI4foovjdP9DpK3gm07jc3XpZY8lxc7C_g/edit?usp=sharing')"
                         class="w-full text-left p-3 rounded-lg border border-dark-border bg-dark-elev/40 hover:bg-dark-elev hover:border-brand-blue/30 transition flex items-center justify-between">
                     <span class="flex items-center gap-3 text-xs text-gray-200">
-                        <i class="fa-solid fa-file-pdf text-red-400 text-base"></i> ProyectoFinal_Guia.pdf
+                        <i class="fa-solid fa-file-word text-blue-400 text-base"></i> Métodos de C#
                     </span>
-                    <span class="text-[10px] text-dark-muted font-mono">1.2 MB</span>
+                    <span class="text-[10px] text-dark-muted font-mono">Google Doc</span>
                 </button>
 
-                <button type="button" onclick="selectDriveFile('CodigoBase_Laboratorio.zip', 'https://drive.google.com/file/d/cod_base_lab')"
+                <button type="button" onclick="selectDriveFile('Funcionalidades De Bootstrap', 'https://docs.google.com/document/d/1_tfdM_bDZzufQ_yBO_SrXNyIlPQYwrJx46NgDlj17Q8/edit?usp=sharing')"
                         class="w-full text-left p-3 rounded-lg border border-dark-border bg-dark-elev/40 hover:bg-dark-elev hover:border-brand-blue/30 transition flex items-center justify-between">
                     <span class="flex items-center gap-3 text-xs text-gray-200">
-                        <i class="fa-solid fa-file-zipper text-yellow-400 text-base"></i> CodigoBase_Laboratorio.zip
+                        <i class="fa-solid fa-file-word text-blue-400 text-base"></i> Funcionalidades De Bootstrap
                     </span>
-                    <span class="text-[10px] text-dark-muted font-mono font-sans">15.8 MB</span>
+                    <span class="text-[10px] text-dark-muted font-mono">Google Doc</span>
                 </button>
 
-                <button type="button" onclick="selectDriveFile('Lectura_EstructurasLineales.pdf', 'https://drive.google.com/file/d/lectura_est')"
+                <button type="button" onclick="selectDriveFile('Códigos de estado HTTP', 'https://docs.google.com/spreadsheets/d/1i03s6zP2gWVcCVa-l9Y4oyHTMXZJq2xBTSQdwMi33IE/edit?usp=sharing')"
                         class="w-full text-left p-3 rounded-lg border border-dark-border bg-dark-elev/40 hover:bg-dark-elev hover:border-brand-blue/30 transition flex items-center justify-between">
                     <span class="flex items-center gap-3 text-xs text-gray-200">
-                        <i class="fa-solid fa-file-pdf text-red-400 text-base"></i> Lectura_EstructurasLineales.pdf
+                        <i class="fa-solid fa-file-excel text-green-400 text-base"></i> Códigos de estado HTTP
                     </span>
-                    <span class="text-[10px] text-dark-muted font-mono">3.4 MB</span>
+                    <span class="text-[10px] text-dark-muted font-mono">Google Sheet</span>
                 </button>
             </div>
         </div>
@@ -423,7 +429,6 @@
     </div>
 </div>
 
-<!-- Formulario Oculto para Enviar Archivo Adjuntado -->
 <form id="attachFileForm" asp-action="AttachFile" method="post" class="hidden">
     <input type="hidden" name="courseId" value="@Model.Id" />
     <input type="hidden" name="fileName" id="attachFileName" />

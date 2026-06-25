@@ -5,19 +5,20 @@
 }
 
 <div class="space-y-8">
-    <!-- Header de Página -->
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-dark-border pb-6">
-        <div>
-            <div class="eyebrow mb-1">Administración</div>
-            <h1 class="text-3xl font-extrabold tracking-tight text-white font-title text-gradient">Control de Cursos</h1>
-            <p class="text-sm text-dark-muted mt-1">Crea, edita, y elimina las asignaturas disponibles en la plataforma.</p>
-        </div>
-        <div class="flex items-center gap-3">
-            <a asp-action="Crear" class="btn btn-md btn-primary">
-                <i class="fa-solid fa-plus text-xs"></i> Nuevo Curso
-            </a>
-        </div>
+<!-- Header de Página -->
+<div class="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-dark-border pb-6 mb-6 text-left items-start">
+    <div class="text-left items-start flex flex-col w-full sm:w-auto">
+        <div class="eyebrow mb-1 text-xs font-semibold uppercase tracking-wider text-brand-primary">Administración</div>
+        <h1 class="text-3xl font-extrabold tracking-tight text-white font-title text-gradient leading-tight">Control de Cursos</h1>
+        <p class="text-sm text-dark-muted mt-1">Crea, edita, y elimina las asignaturas disponibles en la plataforma.</p>
     </div>
+    
+    <div class="flex flex-wrap items-center justify-start sm:justify-end gap-3 w-full sm:w-auto mt-2 sm:mt-0">
+        <a asp-action="Crear" class="btn btn-md btn-primary inline-flex items-center justify-center gap-2 w-full sm:w-auto">
+            <i class="fa-solid fa-plus text-xs"></i> <span>Nuevo Curso</span>
+        </a>
+    </div>
+</div>
 
     <!-- Panel de Métricas / Resumen de Administración -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">

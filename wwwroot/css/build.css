@@ -26,6 +26,7 @@
     --color-yellow-400: oklch(85.2% 0.199 91.936);
     --color-yellow-500: oklch(79.5% 0.184 86.047);
     --color-yellow-950: oklch(28.6% 0.066 53.813);
+    --color-green-400: oklch(79.2% 0.209 151.711);
     --color-green-500: oklch(72.3% 0.219 149.579);
     --color-emerald-300: oklch(84.5% 0.143 164.978);
     --color-emerald-400: oklch(76.5% 0.177 163.223);
@@ -2779,6 +2780,9 @@
   }
   .text-gray-300 {
     color: var(--color-gray-300);
+  }
+  .text-green-400 {
+    color: var(--color-green-400);
   }
   .text-indigo-100 {
     color: var(--color-indigo-100);

@@ -257,7 +257,7 @@ namespace StudyGo.Controllers
                 Materials = course.DriveFiles.Select(f => new DriveFileItemViewModel
                 {
                     Id = f.Id,
-                    Name = f.Url.Split('/').Last(),
+                    Name = f.Name,
                     Url = f.Url,
                     OwnerName = f.Owner?.DisplayName ?? "Usuario"
                 }).ToList(),

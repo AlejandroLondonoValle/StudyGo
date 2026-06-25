@@ -228,6 +228,7 @@ namespace StudyGo.Services
                 Id = Guid.NewGuid(),
                 CourseId = courseId,
                 OwnerId = userId,
+                Name = fileName, // ◄--- ¡TE FALTABA ESTA LÍNEA AQUÍ!
                 DriveFileId = "drive_" + Guid.NewGuid().ToString().Substring(0, 8),
                 Url = url
             };

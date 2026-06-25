@@ -1,3 +1,6 @@
+// ============================================================================
+// StudyGo · Controllers/TareasController.cs
+// ============================================================================
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,11 +25,13 @@ namespace StudyGo.Controllers
     {
         private readonly IAcademicService _academicService;
         private readonly AppDbContext _context;
+        private readonly INotificationService _notificationService; // Inyectado para Jaison
 
-        public TareasController(IAcademicService academicService, AppDbContext context)
+        public TareasController(IAcademicService academicService, AppDbContext context, INotificationService notificationService)
         {
             _academicService = academicService;
             _context = context;
+            _notificationService = notificationService; // Asignado para Jaison
         }
 
         private string GetCurrentRole()
@@ -159,6 +164,7 @@ namespace StudyGo.Controllers
                 return View(vm);
             }
 
+            // CORREGIDO: Se usa declaración implícita para evitar errores de polimorfismo con la firma del servicio
             var task = new ProgrammingTask
             {
                 CourseId = vm.CourseId,
@@ -168,7 +174,7 @@ namespace StudyGo.Controllers
                 TimeLimitSeconds = vm.TimeLimitSeconds,
                 MemoryLimitMb = vm.MemoryLimitMb,
                 State = ActivityState.Publicado,
-                DueDate = vm.DueDate // <--- Mapeo agregado
+                DueDate = vm.DueDate
             };
 
             await _academicService.CreateTaskAsync(task);
@@ -190,6 +196,44 @@ namespace StudyGo.Controllers
                 _context.Rubrics.Add(rubric);
                 await _context.SaveChangesAsync();
             }
+
+            // ============================================================================
+            // INTEGRACIÓN DE COMUNICACIÓN (JAISON) - AL FINAL DEL CONTROLADOR
+            // ============================================================================
+            if (task.DueDate.HasValue)
+            {
+                var calendarEvent = new CalendarEvent
+                {
+                    Id = Guid.NewGuid(),
+                    CourseId = task.CourseId,
+                    Title = $"Entrega: {task.Title}",
+                    StartsAt = task.DueDate.Value.AddHours(-2),
+                    EndsAt = task.DueDate.Value
+                };
+                _context.CalendarEvents.Add(calendarEvent);
+                await _context.SaveChangesAsync();
+            }
+
+            var enrolledStudentIds = await _context.Enrollments
+                .Where(e => e.CourseId == task.CourseId)
+                .Select(e => e.StudentId)
+                .ToListAsync();
+
+            foreach (var studentId in enrolledStudentIds)
+            {
+                _context.Notifications.Add(new Notification
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = studentId,
+                    Type = "info",
+                    Message = $"Nueva tarea asignada: {task.Title}",
+                    IsRead = false,
+                    CreatedAt = DateTime.Now
+                });
+            }
+
+            await _context.SaveChangesAsync();
+            // ============================================================================
 
             return RedirectToAction(nameof(Index));
         }
@@ -217,10 +261,7 @@ namespace StudyGo.Controllers
                 MemoryLimitMb = task.MemoryLimitMb,
                 CourseId = task.CourseId,
                 CourseName = task.Course?.Name ?? "",
-
-                // CAMBIA ESTA LÍNEA (Dejar solo el valor puro de la BD):
                 DueDate = task.DueDate,
-
                 AvailableCourses = courses.Select(c => (c.Id, c.Name)).ToList()
             };
 
@@ -255,7 +296,6 @@ namespace StudyGo.Controllers
             var role = GetCurrentRole();
             var userId = GetCurrentUserId();
 
-            // Validar pesos de rúbrica
             if (vm.RubricCriteria != null && vm.RubricCriteria.Any())
             {
                 var totalWeight = vm.RubricCriteria.Sum(c => c.Weight);
@@ -272,29 +312,24 @@ namespace StudyGo.Controllers
                 return View(vm);
             }
 
-            // 1. Buscar la tarea real de la BD usando el DbContext directamente para asegurar el tracking
             var existingTask = await _context.Set<ProgrammingTask>().FirstOrDefaultAsync(t => t.Id == id);
             if (existingTask == null) return NotFound();
 
-            // 2. Modificar las propiedades del objeto trackeado con lo que viene del formulario
             existingTask.CourseId = vm.CourseId;
             existingTask.Title = vm.Title;
             existingTask.Description = vm.Description;
             existingTask.Language = vm.Language;
             existingTask.TimeLimitSeconds = vm.TimeLimitSeconds;
             existingTask.MemoryLimitMb = vm.MemoryLimitMb;
-            existingTask.DueDate = vm.DueDate; // <--- Ahora sí cambiarán las fechas y nulos
+            existingTask.DueDate = vm.DueDate;
 
-            // 3. Guardar en la base de datos aplicando los cambios detectados por el Change Tracker
             _context.Entry(existingTask).State = EntityState.Modified;
             await _context.SaveChangesAsync();
 
-            // ── REGLA: si ya hay submissions, NO tocar la rúbrica ──
             bool hasSubmissions = await _context.Submissions.AnyAsync(s => s.ProgrammingTaskId == id);
 
             if (!hasSubmissions)
             {
-                // No hay entregas: podemos borrar y recrear la rúbrica libremente
                 var existingRubric = await _context.Rubrics
                     .Include(r => r.Criteria)
                     .FirstOrDefaultAsync(r => r.ProgrammingTaskId == id);
@@ -338,11 +373,10 @@ namespace StudyGo.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-
         // POST: /Tareas/Eliminar/{id}
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Eliminar(Guid id)
+        public async Task<IActionResult> Cancelar(Guid id)
         {
             if (!User.IsInRole("Docente") && !User.IsInRole("Administrador")) return Forbid();
             await _academicService.DeleteTaskAsync(id);
@@ -412,14 +446,10 @@ namespace StudyGo.Controllers
                 Language = task.Language,
                 TimeLimitSeconds = task.TimeLimitSeconds,
                 MemoryLimitMb = task.MemoryLimitMb,
-                // Al no tener un campo 'Title' en tu clase Rubric, usamos un título estático
                 RubricTitle = task.Rubric != null ? "Criterios de Evaluación" : "Sin Rúbrica",
-
                 RubricCriteria = task.Rubric?.Criteria?.Select(c => new RubricaCriterioViewModel
                 {
-                    // Usamos Description ya que no tienes campo 'Name' en RubricCriteria
                     Description = c.Description,
-                    // Convertimos el decimal (ej 0.25) a entero (25)
                     Weight = (int)(c.Weight * 100)
                 }).ToList() ?? new List<RubricaCriterioViewModel>(),
                 Role = role,
@@ -433,7 +463,6 @@ namespace StudyGo.Controllers
             return View(vm);
         }
 
-        // GET: /Tareas/ObtenerCodigoVersion?versionId={versionId}
         public async Task<IActionResult> ObtenerCodigoVersion(Guid versionId)
         {
             var v = await _academicService.GetSubmissionVersionAsync(versionId);
@@ -486,7 +515,6 @@ namespace StudyGo.Controllers
             }
         }
 
-        // POST: /Tareas/EjecutarCode
         [HttpPost]
         public async Task<IActionResult> EjecutarCode([FromBody] EjecutarCodigoRequest request)
         {
@@ -572,6 +600,7 @@ namespace StudyGo.Controllers
                 else if (lang == "java")
                 {
                     var codePath = Path.Combine(sandboxDir, "Program.java");
+                    // CORREGIDO: Pasado el argumento requerido de la ruta de destino al método asíncrono
                     await System.IO.File.WriteAllTextAsync(codePath, request.Code);
 
                     var (compileExitCode, compileStdout, compileStderr) = await RunProcessAsync("javac", "Program.java", workingDir: sandboxDir, timeoutMs: 15000);
@@ -594,7 +623,6 @@ namespace StudyGo.Controllers
                     executableName = "node";
                     runArgs = "index.js";
                 }
-
                 else
                 {
                     return Json(new EjecutarCodigoResponse
@@ -729,7 +757,6 @@ namespace StudyGo.Controllers
             }
         }
 
-        // POST: /Tareas/Entregas/{id}
         [HttpPost]
         public async Task<IActionResult> Entregar(Guid id, [FromBody] EntregarTareaRequest request)
         {
@@ -744,7 +771,6 @@ namespace StudyGo.Controllers
             return Json(new { success = true, versionId = newVersion.Id, versionNumber = newVersion.VersionNumber });
         }
 
-        // GET: /Tareas/Revision/{id}?studentId={studentId}
         public async Task<IActionResult> Revision(Guid id, Guid? studentId = null)
         {
             if (!User.IsInRole("Docente") && !User.IsInRole("Administrador")) return Forbid();
@@ -844,7 +870,6 @@ namespace StudyGo.Controllers
             return View(vm);
         }
 
-        // POST: /Tareas/Calificar
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Calificar(Guid submissionId, decimal? score, string feedback, Guid taskId, Guid studentId, [FromForm] List<CriterionEvaluationInputModel> criterionEvaluations)

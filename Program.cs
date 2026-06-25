@@ -76,6 +76,8 @@ builder.Services.AddScoped<IChatService, ChatService>();
 // Caso de uso de notificaciones.
 builder.Services.AddScoped<INotificationService, NotificationService>();
 
+builder.Services.AddScoped<ICalendarService, CalendarService>();
+
 // Antiforgery por header (el respaldo HTTP de chat.js envía el token así).
 builder.Services.AddAntiforgery(o => o.HeaderName = "RequestVerificationToken");
 // ============================================================================

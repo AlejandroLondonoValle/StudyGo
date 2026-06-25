@@ -350,6 +350,9 @@
   .end-100 {
     inset-inline-end: calc(var(--spacing) * 100);
   }
+  .-top-1 {
+    top: calc(var(--spacing) * -1);
+  }
   .-top-3 {
     top: calc(var(--spacing) * -3);
   }
@@ -394,6 +397,9 @@
   }
   .top-\[180px\] {
     top: 180px;
+  }
+  .-right-1 {
+    right: calc(var(--spacing) * -1);
   }
   .-right-3 {
     right: calc(var(--spacing) * -3);

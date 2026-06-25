@@ -1,3 +1,6 @@
+// ============================================================================
+// StudyGo · Controllers/QuizController.cs
+// ============================================================================
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,11 +23,13 @@ namespace StudyGo.Controllers
     {
         private readonly IQuizService _quizService;
         private readonly AppDbContext _context;
+        private readonly INotificationService _notificationService; // Inyectado para Jaison
 
-        public QuizController(IQuizService quizService, AppDbContext context)
+        public QuizController(IQuizService quizService, AppDbContext context, INotificationService notificationService)
         {
             _quizService = quizService;
             _context = context;
+            _notificationService = notificationService; // Asignado para Jaison
         }
 
         private Guid GetCurrentUserId()
@@ -35,7 +40,6 @@ namespace StudyGo.Controllers
 
         private bool IsAdmin() => User.IsInRole("Administrador");
 
-        // GET: Quiz/Index
         public async Task<IActionResult> Index()
         {
             var userId = GetCurrentUserId();
@@ -70,7 +74,6 @@ namespace StudyGo.Controllers
             return View(viewModel);
         }
 
-        // GET: Quiz/Create
         public async Task<IActionResult> Create()
         {
             var userId = GetCurrentUserId();
@@ -88,19 +91,16 @@ namespace StudyGo.Controllers
             return View(viewModel);
         }
 
-        // POST: Quiz/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(QuizViewModel model)
         {
             var userId = GetCurrentUserId();
 
-            // Limpiar ModelState de propiedades que no vienen del formulario
             ModelState.Remove("Id");
             ModelState.Remove("CourseName");
             ModelState.Remove("AvailableCourses");
 
-            // Verificar permiso sobre el curso
             if (model.CourseId == Guid.Empty)
             {
                 ModelState.AddModelError("CourseId", "Debes seleccionar un curso.");
@@ -117,26 +117,65 @@ namespace StudyGo.Controllers
                     ModelState.AddModelError("CourseId", "No tienes permiso para crear quizzes en este curso.");
             }
 
-            // Recargar cursos para el select en caso de error
             model.AvailableCourses = await _quizService.GetAvailableCoursesAsync(userId, IsAdmin());
 
-            // Validar preguntas
             if (!ValidateQuizQuestions(model)) return View(model);
 
             if (!ModelState.IsValid)
             {
-                // Mostrar errores de ModelState en TempData para que sean visibles
                 var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
                 TempData["ErrorMessage"] = string.Join(" ", errors);
                 return View(model);
             }
 
-            await _quizService.CreateQuizAsync(model);
+            // Guardar el quiz usando la capa de servicios existente de Negro
+            var savedQuizId = await _quizService.CreateQuizAsync(model);
+
+            // ============================================================================
+            // INTEGRACIÓN DE COMUNICACIÓN (JAISON) - AL FINAL DEL CONTROLADOR
+            // ============================================================================
+            var quiz = await _context.Quizzes.FindAsync(savedQuizId);
+            if (quiz != null)
+            {
+                if (quiz.OpenDate.HasValue && quiz.DueDate.HasValue)
+                {
+                    var calendarEvent = new CalendarEvent
+                    {
+                        Id = Guid.NewGuid(),
+                        CourseId = quiz.CourseId,
+                        Title = $"Quiz: {quiz.Title}",
+                        StartsAt = quiz.OpenDate.Value,
+                        EndsAt = quiz.DueDate.Value
+                    };
+                    _context.CalendarEvents.Add(calendarEvent);
+                    await _context.SaveChangesAsync();
+                }
+
+                var enrolledStudents = await _context.Enrollments
+                    .Where(e => e.CourseId == quiz.CourseId)
+                    .Select(e => e.StudentId)
+                    .ToListAsync();
+
+                foreach (var studentId in enrolledStudents)
+                {
+                    await _notificationService.CreateNotificationAsync(new Notification
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = studentId,
+                        Type = "warn",
+                        Message = $"Nuevo Quiz publicado: {quiz.Title}",
+                        Link = $"/StudentQuiz/Index",
+                        IsRead = false,
+                        CreatedAt = DateTime.Now
+                    });
+                }
+            }
+            // ============================================================================
+
             TempData["SuccessMessage"] = "Quiz creado exitosamente.";
             return RedirectToAction(nameof(Index));
         }
 
-        // GET: Quiz/Edit/{id}
         public async Task<IActionResult> Edit(Guid id)
         {
             var userId = GetCurrentUserId();
@@ -182,7 +221,6 @@ namespace StudyGo.Controllers
             return View(viewModel);
         }
 
-        // POST: Quiz/Edit/{id}
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(Guid id, QuizViewModel model)
@@ -192,7 +230,6 @@ namespace StudyGo.Controllers
             if (!await _quizService.CanUserManageQuizAsync(id, userId, IsAdmin()))
                 return Forbid();
 
-            // Limpiar ModelState de propiedades que no vienen del formulario
             ModelState.Remove("CourseName");
             ModelState.Remove("AvailableCourses");
 
@@ -213,7 +250,6 @@ namespace StudyGo.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // POST: Quiz/Delete/{id}
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(Guid id)
@@ -229,7 +265,6 @@ namespace StudyGo.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // GET: Quiz/Stats/{id}
         public async Task<IActionResult> Stats(Guid id)
         {
             var userId = GetCurrentUserId();
@@ -251,9 +286,6 @@ namespace StudyGo.Controllers
             return View(attempts);
         }
 
-        // ──────────────────────────────────────────────
-        // Validación privada de preguntas
-        // ──────────────────────────────────────────────
         private bool ValidateQuizQuestions(QuizViewModel model)
         {
             if (model.Questions == null || model.Questions.Count == 0)

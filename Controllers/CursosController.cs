@@ -200,6 +200,7 @@ namespace StudyGo.Controllers
         public async Task<IActionResult> Detalle(Guid id, string tab = "Asignaciones")
         {
             await EnsureCurrentUserCachedAsync();
+
             var course = await _academicService.GetCourseDetailAsync(id);
             if (course == null) return NotFound();
 
@@ -208,6 +209,38 @@ namespace StudyGo.Controllers
             var isDriveConnected = await _academicService.IsDriveConnectedAsync(userId);
             var isEnrolled = await _academicService.IsEnrolledAsync(id, userId);
 
+            // 1. Procesar de forma asíncrona y segura las actividades para evitar .Result
+            var activitiesViewModels = new List<ActivityItemViewModel>();
+
+            foreach (var a in course.Activities)
+            {
+                var isTask = a is ProgrammingTask;
+                var task = a as ProgrammingTask;
+                Models.Submission submission = null;
+
+                if (isTask && role == "Estudiante")
+                {
+                    // El await ocurre limpiamente aquí dentro del flujo asíncrono
+                    submission = await _academicService.GetOrCreateSubmissionAsync(a.Id, userId);
+                }
+
+                activitiesViewModels.Add(new ActivityItemViewModel
+                {
+                    Id = a.Id,
+                    Title = a.Title,
+                    Description = a.Description,
+                    Type = isTask ? "ProgrammingTask" : "Quiz",
+                    State = a.State.ToString(),
+                    Language = isTask ? task?.Language : "-",
+                    StudentSubmissionStatus = isTask && role == "Estudiante"
+                        ? (submission?.Status.ToString() ?? "SinEmpezar")
+                        : (role != "Estudiante" ? "Vista docente" : "SinEmpezar"),
+                    DueDate = a.DueDate,
+                    Grade = (isTask && submission?.Grade != null) ? submission.Grade.FinalScore : (decimal?)null
+                });
+            }
+
+            // 2. Construir el ViewModel principal mapeando el resto de las colecciones síncronas
             var vm = new CursoDetalleViewModel
             {
                 Id = course.Id,
@@ -220,29 +253,7 @@ namespace StudyGo.Controllers
                 ActiveTab = tab,
                 IsDriveConnected = isDriveConnected,
                 IsEnrolled = isEnrolled,
-                Activities = course.Activities.Select(a => {
-                    var isTask = a is ProgrammingTask;
-                    var task = a as ProgrammingTask;
-                    Models.Submission submission = null;
-                    if (isTask && role == "Estudiante")
-                    {
-                        submission = _academicService.GetOrCreateSubmissionAsync(a.Id, userId).Result;
-                    }
-                    return new ActivityItemViewModel
-                    {
-                        Id = a.Id,
-                        Title = a.Title,
-                        Description = a.Description,
-                        Type = isTask ? "ProgrammingTask" : "Quiz",
-                        State = a.State.ToString(),
-                        Language = isTask ? task?.Language : "-",
-                        StudentSubmissionStatus = isTask && role == "Estudiante"
-                            ? (submission?.Status.ToString() ?? "SinEmpezar")
-                            : (role != "Estudiante" ? "Vista docente" : "SinEmpezar"),
-                        DueDate = a.DueDate,
-                        Grade = (isTask && submission?.Grade != null) ? submission.Grade.FinalScore : (decimal?)null
-                    };
-                }).ToList(),
+                Activities = activitiesViewModels, // Lista completamente resuelta
                 Materials = course.DriveFiles.Select(f => new DriveFileItemViewModel
                 {
                     Id = f.Id,
@@ -261,7 +272,6 @@ namespace StudyGo.Controllers
 
             return View(vm);
         }
-
         // GET: /Cursos/Crear
         public IActionResult Crear()
         {

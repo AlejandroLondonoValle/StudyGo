@@ -86,18 +86,18 @@
             <!-- Fecha de apertura -->
             <div>
                 <label asp-for="OpenDate" class="block text-sm font-medium text-slate-300 mb-1.5"></label>
-                <input asp-for="OpenDate" type="datetime-local" class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3.5 py-2.5 text-sm text-white transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+                <input asp-for="OpenDate" type="datetime-local" class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3.5 py-2.5 text-sm text-white transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 [&::-webkit-calendar-picker-indicator]:invert" />
                 <span asp-validation-for="OpenDate" class="text-xs text-red-400 mt-1"></span>
             </div>
 
-            <!-- Fecha límite -->
+            <!-- Fecha limite -->
             <div>
                 <label asp-for="DueDate" class="block text-sm font-medium text-slate-300 mb-1.5"></label>
-                <input asp-for="DueDate" type="datetime-local" class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3.5 py-2.5 text-sm text-white transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+                <input asp-for="DueDate" type="datetime-local" class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3.5 py-2.5 text-sm text-white transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 [&::-webkit-calendar-picker-indicator]:invert" />
                 <span asp-validation-for="DueDate" class="text-xs text-red-400 mt-1"></span>
             </div>
 
-            <!-- Estado -->
+            <!-- Estado --> 
             <div>
                 <label asp-for="State" class="block text-sm font-medium text-slate-300 mb-1.5"></label>
                 <select asp-for="State" asp-items="Html.GetEnumSelectList<StudyGo.Enums.ActivityState>()" class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3.5 py-2.5 text-sm text-white transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">

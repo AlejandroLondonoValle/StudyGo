@@ -1,4 +1,8 @@
-﻿using System;
+﻿// ============================================================================
+// StudyGo · ViewModels/CalendarEventViewModel.cs
+// ============================================================================
+using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace StudyGo.ViewModels
@@ -23,5 +27,16 @@ namespace StudyGo.ViewModels
         [Required(ErrorMessage = "La fecha de fin es obligatoria.")]
         [Display(Name = "Fin")]
         public DateTime EndsAt { get; set; }
+    }
+
+    // Estructura de transmisión requerida por la API de FullCalendar
+    public class FullCalendarEventViewModel
+    {
+        public string id { get; set; }
+        public string title { get; set; }
+        public string start { get; set; }
+        public string end { get; set; }
+        public string className { get; set; }
+        public object extendedProps { get; set; }
     }
 }

@@ -1,0 +1,246 @@
+@model StudyGo.ViewModels.Cursos.CursosListViewModel
+
+@{
+    ViewData["Title"] = "Mis Cursos";
+}
+
+<div class="space-y-8">
+   <!-- Header de Página -->
+<div class="w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-dark-border pb-6 mb-6 text-left items-start">
+    <div class="text-left items-start flex flex-col">
+        <div class="eyebrow mb-1 text-xs font-semibold uppercase tracking-wider text-brand-primary">Académico</div>
+        <h1 class="text-3xl font-extrabold tracking-tight text-white font-title text-gradient">Mis Cursos</h1>
+        <p class="text-sm text-dark-muted mt-1">Administra tus asignaturas y revisa tu rendimiento general.</p>
+    </div>
+    
+    <div class="flex flex-wrap items-center justify-start sm:justify-end gap-3 w-full sm:w-auto mt-2 sm:mt-0">
+        @if (Model.Role == "Estudiante" || Model.Role == "Administrador")
+        {
+            <a asp-action="Explorar" class="btn btn-md btn-secondary inline-flex items-center gap-2">
+                <i class="fa-solid fa-magnifying-glass text-xs"></i> Explorar cursos
+            </a>
+        }
+        @if (User.IsInRole("Administrador") || User.IsInRole("Docente"))
+        {
+            <a asp-action="Crear" class="btn btn-md btn-primary inline-flex items-center gap-2">
+                <i class="fa-solid fa-plus text-xs"></i> Nuevo Curso
+            </a>
+        }
+    </div>
+</div>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="flex items-center gap-3 p-4 mb-6 rounded-xl bg-brand-mint/10 border border-brand-mint/20 text-brand-mint text-sm w-full text-left">
+        <i class="fa-solid fa-circle-check"></i>
+        <span>@TempData["SuccessMessage"]</span>
+    </div>
+}
+
+    <!-- Panel de Métricas / Resumen -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="card p-6 relative overflow-hidden group hover:border-brand-blue/30 transition-all duration-300">
+            <div class="absolute -right-10 -top-10 w-24 h-24 bg-brand-blue/5 rounded-full blur-xl group-hover:bg-brand-blue/10 transition-all"></div>
+            <div class="text-xs font-mono uppercase text-dark-muted tracking-wider">Cursos Activos</div>
+            <div class="text-4xl font-extrabold text-white mt-2 font-title">@Model.Cursos.Count</div>
+            <div class="text-[11px] text-brand-mint mt-1"><i class="fa-solid fa-circle-check"></i> Al día con el periodo académico</div>
+        </div>
+
+        <div class="card p-6 relative overflow-hidden group hover:border-brand-blue/30 transition-all duration-300">
+            <div class="absolute -right-10 -top-10 w-24 h-24 bg-brand-purple/5 rounded-full blur-xl group-hover:bg-brand-purple/10 transition-all"></div>
+            <div class="text-xs font-mono uppercase text-dark-muted tracking-wider">
+                @(Model.Role == "Estudiante" ? "Tareas Pendientes" : "Por Calificar")
+            </div>
+            <div class="text-4xl font-extrabold text-white mt-2 font-title">
+                @(Model.Role == "Estudiante" ? Model.TotalPendingTasks : Model.TotalPendingGrading)
+            </div>
+            <div class="text-[11px] text-yellow-400 mt-1"><i class="fa-solid fa-clock"></i>
+                @(Model.Role == "Estudiante" ? "Sin entregar o en progreso" : "Entregas esperando revisión")
+            </div>
+        </div>
+
+        <div class="card p-6 relative overflow-hidden group hover:border-brand-blue/30 transition-all duration-300">
+            <div class="absolute -right-10 -top-10 w-24 h-24 bg-brand-mint/5 rounded-full blur-xl group-hover:bg-brand-mint/10 transition-all"></div>
+            <div class="text-xs font-mono uppercase text-dark-muted tracking-wider">
+                @(Model.Role == "Estudiante" ? "Promedio General" : "Calificadas")
+            </div>
+            <div class="text-4xl font-extrabold text-white mt-2 font-title font-mono">
+                @if (Model.Role == "Estudiante")
+                {
+                    @(Model.AverageGrade.HasValue ? Model.AverageGrade.Value.ToString("F1") : "—")
+                }
+                else
+                {
+                    @Model.TotalGradedTasks
+                }
+            </div>
+            <div class="text-[11px] text-brand-blue mt-1"><i class="fa-solid fa-chart-line"></i>
+                @(Model.Role == "Estudiante" ? "Nota promedio de entregas calificadas" : "Entregas con nota registrada")
+            </div>
+        </div>
+    </div>
+
+    <!-- Listado de Cursos -->
+    @if (!Model.Cursos.Any())
+    {
+        <div class="card p-12 text-center flex flex-col items-center justify-center max-w-xl mx-auto mt-8">
+            <div class="w-16 h-16 rounded-full bg-white/5 border border-dark-border flex items-center justify-center text-dark-muted text-2xl mb-4">
+                <i class="fa-solid fa-graduation-cap"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white font-title">Sin cursos inscritos</h3>
+            <p class="text-sm text-dark-muted mt-2 max-w-sm">
+                @(Model.Role == "Docente" || Model.Role == "Administrador"
+                    ? "Aún no has creado ningún curso en este periodo. Comienza agregando uno."
+                    : "No tienes cursos inscritos por el momento. Explora los cursos disponibles y únete.")
+            </p>
+            <div class="flex gap-3 mt-6">
+                @if (Model.Role == "Docente" || Model.Role == "Administrador")
+                {
+                    <a asp-action="Crear" class="btn btn-md btn-primary">Crear primer curso</a>
+                }
+                @if (Model.Role == "Estudiante" || Model.Role == "Administrador")
+                {
+                    <a asp-action="Explorar" class="btn btn-md btn-secondary">
+                        <i class="fa-solid fa-magnifying-glass text-xs"></i> Explorar cursos
+                    </a>
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Barra de Búsqueda de Cursos -->
+        <div class="glass-panel p-4 mb-6 flex items-center gap-3 rounded-2xl border border-dark-border/60">
+            <div class="relative flex-grow">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-dark-muted">
+                    <i class="fa-solid fa-magnifying-glass text-sm"></i>
+                </span>
+                <input type="text" id="course-search-input" placeholder="Buscar curso por nombre o código..." 
+                class="block w-full rounded-xl border border-slate-800/80 bg-slate-950/60 py-2.5 pl-11 pr-4 text-xs text-white placeholder:text-dark-muted/50 focus:border-indigo-500/80 focus:ring-4 focus:ring-indigo-500/10 focus:bg-slate-950 transition-all outline-none" />
+            </div>
+        </div>
+
+        <!-- Mensaje de no resultados en la búsqueda -->
+        <div id="no-search-results" class="card p-12 text-center hidden flex flex-col items-center justify-center max-w-xl mx-auto mt-4">
+            <div class="w-14 h-14 rounded-full bg-white/5 border border-dark-border flex items-center justify-center text-dark-muted text-xl mb-3">
+                <i class="fa-solid fa-magnifying-glass"></i>
+            </div>
+            <h3 class="text-base font-bold text-white font-title">Sin coincidencias</h3>
+            <p class="text-xs text-dark-muted mt-1 max-w-sm">
+                No encontramos ningún curso que coincida con tu búsqueda. Intenta con otros términos.
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="courses-grid">
+            @foreach (var curso in Model.Cursos)
+            {
+                <div class="card relative overflow-hidden flex flex-col justify-between group hover:border-brand-blue/30 transition-all duration-300 course-card"
+                     data-name="@curso.Name.ToLower()" data-code="@curso.Code.ToLower()">
+                    <!-- Efecto Glow Superior -->
+                    <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-blue/40 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500"></div>
+
+                    <div class="p-6">
+                        <div class="flex items-start justify-between gap-4 mb-4">
+                            <span class="font-mono text-xs uppercase tracking-wider text-brand-blue bg-brand-blue/10 px-2.5 py-1 rounded-md">
+                                @curso.Code
+                            </span>
+                            <div class="flex items-center gap-1.5 text-xs text-dark-muted font-mono">
+                                <i class="fa-solid fa-users"></i> @curso.StudentCount estudiantes
+                            </div>
+                        </div>
+
+                        <h3 class="text-xl font-bold text-white font-title mb-2 group-hover:text-brand-blue transition-colors duration-200">
+                            @curso.Name
+                        </h3>
+
+                        <!-- Datos del Docente -->
+                        <div class="flex items-center gap-2.5 mt-4 text-xs text-dark-muted">
+                            <div class="w-6 h-6 rounded-full bg-brand-blue/20 text-brand-blue flex items-center justify-center font-bold text-[10px]">
+                                @(curso.TeacherName.Length >= 2 ? curso.TeacherName.Substring(0, 2).ToUpper() : curso.TeacherName.ToUpper())
+                            </div>
+                            <div>
+                                <span class="text-gray-200 font-medium block">@curso.TeacherName</span>
+                                <span class="text-[10px] text-dark-muted/80">@curso.TeacherEmail</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer del Curso -->
+                    <div class="p-6 pt-0 bg-dark-elev/20 border-t border-dark-border/40 flex items-center justify-between flex-wrap gap-2">
+                        <a asp-action="Detalle" asp-route-id="@curso.Id" class="btn btn-sm btn-ghost hover:text-brand-blue text-center justify-center font-medium mt-4">
+                            Ver detalles <i class="fa-solid fa-arrow-right text-[10px] ml-1"></i>
+                        </a>
+
+                        <div class="flex gap-2 mt-4 items-center">
+                            @if (User.IsInRole("Docente") || User.IsInRole("Administrador"))
+                            {
+                                <a asp-action="Editar" asp-route-id="@curso.Id" class="p-2 text-dark-muted hover:text-white transition-colors" title="Editar curso">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </a>
+                                @if (User.IsInRole("Docente") || User.IsInRole("Administrador"))
+                                {
+                                    <a asp-action="Docente" asp-controller="Calificaciones" asp-route-cursoId="@curso.Id" class="p-2 text-dark-muted hover:text-brand-mint transition-colors" title="Boletín de calificaciones">
+                                        <i class="fa-solid fa-table-list"></i>
+                                    </a>
+                                }
+                                <form asp-action="Eliminar" asp-route-id="@curso.Id" method="post"
+                                      onsubmit="return confirm('¿Estás seguro de que deseas eliminar el curso &quot;@curso.Name&quot;? Esta acción no se puede deshacer.');"
+                                      class="inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="p-2 text-dark-muted hover:text-rose-400 transition-colors bg-transparent border-none outline-none cursor-pointer" title="Eliminar curso">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </form>
+                            }
+
+                            @if (User.IsInRole("Estudiante") && curso.IsEnrolled)
+                            {
+                                <button type="button" 
+                                        onclick="confirmUnenroll('@curso.Id', '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(curso.Name))', '@Url.Action("Cancelar", "Cursos", new { id = curso.Id })')" 
+                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-400/10 border border-rose-400/20 transition-all bg-transparent cursor-pointer" 
+                                        title="Cancelar inscripción">
+                                    <i class="fa-solid fa-right-from-bracket text-[10px]"></i> Salir del curso
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- Modal Confirmación para Salir del Curso (Steven) -->
+<div id="confirmUnenrollModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-dark-bg/80 backdrop-blur-sm opacity-0 transition-opacity duration-300" data-modal>
+    <div class="glass-panel w-full max-w-md p-6 rounded-3xl scale-95 transition-transform duration-300" data-modal-content>
+        <div class="flex justify-between items-center pb-4 border-b border-dark-border">
+            <h3 class="text-lg font-bold text-white font-title flex items-center gap-2">
+                <i class="fa-solid fa-triangle-exclamation text-rose-400"></i> Confirmar Salida
+            </h3>
+            <button type="button" onclick="closeModal('confirmUnenrollModal')" class="text-dark-muted hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div class="py-6 space-y-3">
+            <p class="text-sm text-gray-200">
+                ¿Estás seguro de que deseas cancelar tu inscripción al curso <span id="unenroll-course-name" class="font-bold text-white"></span>?
+            </p>
+            <p class="text-xs text-dark-muted">
+                Perderás acceso a las asignaciones, materiales y tu historial de calificaciones de esta asignatura de inmediato.
+            </p>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-4 border-t border-dark-border">
+            <button type="button" onclick="closeModal('confirmUnenrollModal')" class="btn btn-sm btn-secondary">Mantenerse</button>
+            <form id="confirmUnenrollForm" method="post" action="">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-sm bg-rose-500 hover:bg-rose-600 text-white border-none">
+                    <i class="fa-solid fa-right-from-bracket mr-1.5 text-xs"></i> Cancelar Inscripción
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/cursos.js" asp-append-version="true"></script>
+}

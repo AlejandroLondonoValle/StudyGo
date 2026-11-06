@@ -1,0 +1,279 @@
+@model StudyGo.ViewModels.Tareas.TareaCrearEditarViewModel
+
+@{
+    ViewData["Title"] = "Nueva Tarea";
+    var backUrl = Url.Action("Index", "Tareas");
+}
+
+<div class="relative max-w-4xl mx-auto pt-6">
+
+    <div class="absolute -top-24 -right-24 w-72 h-72 bg-brand-blue/10 blur-3xl rounded-full pointer-events-none"></div>
+    <div class="absolute -bottom-24 -left-24 w-72 h-72 bg-purple-500/10 blur-3xl rounded-full pointer-events-none"></div>
+
+    <div class="relative space-y-6">
+
+        <div class="flex items-center gap-2 text-sm">
+            <a href="@backUrl" class="text-dark-muted hover:text-brand-blue transition-colors">Tareas</a>
+            <i class="fa-solid fa-chevron-right text-[10px] text-dark-muted/50"></i>
+            <span class="text-brand-blue font-semibold">Nueva Tarea</span>
+        </div>
+
+        <div class="card p-6 md:p-8 backdrop-blur-sm border border-dark-border/60 shadow-2xl shadow-black/20 rounded-2xl">
+
+            <div class="flex items-center gap-4 border-b border-dark-border/60 pb-6 mb-8">
+                <div class="w-12 h-12 rounded-xl bg-brand-blue/10 border border-brand-blue/20 flex items-center justify-center">
+                    <i class="fa-solid fa-code text-brand-blue text-lg"></i>
+                </div>
+                <div>
+                    <h2 class="text-3xl font-black tracking-tight text-white">Nueva Tarea</h2>
+                    <p class="text-sm text-dark-muted mt-1">Configura una nueva tarea de programación para tus estudiantes.</p>
+                </div>
+            </div>
+
+            <form asp-action="Crear" method="post" class="space-y-8">
+
+                @Html.AntiForgeryToken()
+
+                <div asp-validation-summary="ModelOnly"
+                     class="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                    <div class="md:col-span-2">
+                        <label asp-for="Title" class="label"></label>
+                        <input asp-for="Title"
+                               class="block w-full rounded-xl border border-slate-800/80 bg-slate-950/60 p-3 text-xs text-white placeholder:text-dark-muted/50 focus:border-indigo-500/80 focus:ring-4 focus:ring-indigo-500/10 focus:bg-slate-950 transition-all outline-none"
+                               placeholder="Ej. Suma de dos enteros"
+                               autocomplete="off" />
+                        <span asp-validation-for="Title" class="field-error"></span>
+                    </div>
+
+                    <div>
+                        <label asp-for="CourseId" class="label"></label>
+                        <select asp-for="CourseId" class="block w-full rounded-xl border border-slate-800/80 bg-slate-950/60 p-3 text-xs text-white focus:border-indigo-500/80 focus:ring-4 focus:ring-indigo-500/10 focus:bg-slate-950 transition-all outline-none appearance-none">
+                            @foreach (var course in Model.AvailableCourses)
+                            {
+                                <option value="@course.Id" class="bg-slate-950 text-white">@course.Name</option>
+                            }
+                        </select>
+                        <span asp-validation-for="CourseId" class="field-error"></span>
+                    </div>
+
+                    <div>
+                        <label asp-for="Language" class="label"></label>
+                        <select asp-for="Language" class="block w-full rounded-xl border border-slate-800/80 bg-slate-950/60 p-3 text-xs text-white font-mono focus:border-indigo-500/80 focus:ring-4 focus:ring-indigo-500/10 focus:bg-slate-950 transition-all outline-none appearance-none">
+                            <option value="C#" class="bg-slate-950 text-white">C#</option>
+                            <option value="Java" class="bg-slate-950 text-white">Java</option>
+                            <option value="Python" class="bg-slate-950 text-white">Python</option>
+                            <option value="JavaScript" class="bg-slate-950 text-white">JavaScript</option>
+                            <option value="C++" class="bg-slate-950 text-white">C++</option>
+                        </select>
+                        <span asp-validation-for="Language" class="field-error"></span>
+                    </div>
+
+                    <div class="md:col-span-2 bg-slate-950/30 rounded-xl border border-slate-800 p-4 flex items-center justify-between">
+                        <div>
+                            <label class="text-xs font-bold uppercase tracking-wider text-white block">
+                                Establecer fecha y hora límite de entrega
+                            </label>
+                            <p class="text-[11px] text-dark-muted mt-0.5">Si se desactiva, los alumnos podrán entregar la tarea en cualquier momento.</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer select-none">
+                            <input type="checkbox" id="toggle-due-date" class="sr-only peer" checked="@(Model.DueDate != null && Model.DueDate != default(DateTime) ? "checked" : null)">
+                            <div class="w-11 h-6 bg-slate-800 rounded-full peer peer-focus:ring-4 peer-focus:ring-brand-blue/20 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-slate-400 peer-checked:after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-blue"></div>
+                        </label>
+                    </div>
+
+                    <div id="due-date-container" class="md:col-span-2 bg-slate-950/30 rounded-xl border border-slate-800 p-4 transition-all duration-300">
+                        <label asp-for="DueDate" class="text-xs uppercase tracking-wider text-dark-muted mb-3 block">
+                            Fecha y Hora Límite de Entrega
+                        </label>
+                        <div class="relative">
+                            <input asp-for="DueDate"
+                                   id="input-due-date"
+                                   type="datetime-local"
+                                   asp-format="{0:yyyy-MM-ddTHH:mm}"
+                                   class="block w-full rounded-xl border border-slate-800/80 bg-slate-950/60 p-3 font-mono text-xs text-white focus:border-indigo-500/80 focus:ring-4 focus:ring-indigo-500/10 focus:bg-slate-950 transition-all outline-none scheme-dark" />
+                        </div>
+                        <span asp-validation-for="DueDate" class="field-error"></span>
+                    </div>
+
+                    <div class="bg-slate-950/30 rounded-xl border border-slate-800 p-4">
+                        <label asp-for="TimeLimitSeconds"
+                               class="text-xs uppercase tracking-wider text-dark-muted mb-3 block">
+                        </label>
+                        <div class="relative">
+                            <input asp-for="TimeLimitSeconds"
+                                   type="number"
+                                   min="1"
+                                   max="300"
+                                   class="block w-full rounded-xl border border-slate-800/80 bg-slate-950/60 py-2.5 pl-4 pr-12 font-mono text-xs text-white focus:border-indigo-500/80 focus:ring-4 focus:ring-indigo-500/10 focus:bg-slate-950 transition-all outline-none" />
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-dark-muted font-mono">seg</span>
+                        </div>
+                        <span asp-validation-for="TimeLimitSeconds" class="field-error"></span>
+                    </div>
+
+                    <div class="bg-slate-950/30 rounded-xl border border-slate-800 p-4">
+                        <label asp-for="MemoryLimitMb"
+                               class="text-xs uppercase tracking-wider text-dark-muted mb-3 block">
+                        </label>
+                        <div class="relative">
+                            <input asp-for="MemoryLimitMb"
+                                   type="number"
+                                   min="16"
+                                   max="1024"
+                                   class="block w-full rounded-xl border border-slate-800/80 bg-slate-950/60 py-2.5 pl-4 pr-12 font-mono text-xs text-white focus:border-indigo-500/80 focus:ring-4 focus:ring-indigo-500/10 focus:bg-slate-950 transition-all outline-none" />
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-dark-muted font-mono">MB</span>
+                        </div>
+                        <span asp-validation-for="MemoryLimitMb" class="field-error"></span>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label asp-for="Description" class="label"></label>
+                        <div class="bg-brand-blue/5 border border-brand-blue/10 rounded-xl p-4 mb-4">
+                            <p class="text-xs text-brand-blue">
+                                Puedes estructurar tu problema usando:
+                                <span class="font-mono">
+                                    ### Enunciado, ### Entrada, ### Salida, ### Restricciones
+                                </span>
+                            </p>
+                        </div>
+                        <textarea asp-for="Description"
+                                  rows="12"
+                                  class="block w-full rounded-xl border border-slate-800/80 bg-slate-950/60 p-4 font-mono text-xs leading-relaxed text-slate-200 placeholder:text-dark-muted/50 focus:border-indigo-500/80 focus:ring-4 focus:ring-indigo-500/10 focus:bg-slate-950 transition-all outline-none resize-y min-h-[320px]"
+                                  placeholder="### Enunciado&#10;Describe aquí el problema..."></textarea>
+                        <span asp-validation-for="Description" class="field-error"></span>
+                    </div>
+
+                    <div class="md:col-span-2 border-t border-slate-800/60 pt-6 mt-2">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                                    <i class="fa-solid fa-list-check text-brand-blue"></i> Rúbrica de Evaluación
+                                </h3>
+                                <p class="text-[11px] text-dark-muted mt-1">Define criterios con su peso porcentual. La suma debe ser exactamente 100%.</p>
+                            </div>
+                            <button type="button" id="btn-add-criterion" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-white transition-colors">
+                                <i class="fa-solid fa-plus mr-1"></i> Agregar Criterio
+                            </button>
+                        </div>
+
+                        <div id="rubric-container" class="space-y-3"></div>
+
+                        <div class="flex items-center justify-between mt-4 p-3 bg-slate-950/30 rounded-xl border border-slate-800/60">
+                            <span class="text-xs text-dark-muted">Suma total de pesos:</span>
+                            <span id="rubric-total-weight" class="text-sm font-mono font-bold text-red-400">0.00%</span>
+                        </div>
+                        <div id="rubric-weight-error" class="hidden text-xs text-red-400 mt-2"></div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-4 pt-6 border-t border-dark-border/50">
+                    <span class="text-xs text-dark-muted">Todos los campos son obligatorios.</span>
+                    <div class="flex items-center gap-3">
+                        <a href="@backUrl" class="btn btn-md btn-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-md btn-primary font-bold shadow-lg shadow-brand-blue/25">
+                            <i class="fa-solid fa-plus text-xs"></i>
+                            Crear Tarea
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            // LÓGICA DINÁMICA DEL SWITCH DE FECHA LÍMITE
+            const toggleDueDate = document.getElementById('toggle-due-date');
+            const dueDateContainer = document.getElementById('due-date-container');
+            const inputDueDate = document.getElementById('input-due-date');
+
+            function handleToggle() {
+                if (toggleDueDate.checked) {
+                    dueDateContainer.style.display = 'block';
+                    inputDueDate.removeAttribute('disabled');
+                    inputDueDate.setAttribute('required', 'required');
+                } else {
+                    dueDateContainer.style.display = 'none';
+                    inputDueDate.setAttribute('disabled', 'disabled');
+                    inputDueDate.removeAttribute('required');
+                    inputDueDate.value = ''; // Limpiar el valor si se apaga para que envíe NULL al backend
+                }
+            }
+
+            toggleDueDate.addEventListener('change', handleToggle);
+            handleToggle(); // Ejecución inicial al cargar la vista por si viene un valor de edición
+
+
+            // LÓGICA DE LA RÚBRICA (MANTENIDA TOTALMENTE INTEGRAL)
+            const container = document.getElementById('rubric-container');
+            const totalDisplay = document.getElementById('rubric-total-weight');
+            const errorDisplay = document.getElementById('rubric-weight-error');
+            let index = 0;
+
+            function updateTotal() {
+                const inputs = container.querySelectorAll('input[name$=".Weight"]');
+                let total = 0;
+                inputs.forEach(inp => total += parseFloat(inp.value) || 0);
+                totalDisplay.textContent = total.toFixed(2) + '%';
+                totalDisplay.className = 'text-sm font-mono font-bold ' + (Math.abs(total - 100) < 0.01 ? 'text-emerald-400' : 'text-red-400');
+                if (Math.abs(total - 100) >= 0.01) {
+                    errorDisplay.textContent = 'La suma debe ser exactamente 100%. Actual: ' + total.toFixed(2) + '%';
+                    errorDisplay.classList.remove('hidden');
+                } else {
+                    errorDisplay.classList.add('hidden');
+                }
+            }
+
+            function createRow(idx, desc, weight) {
+                const div = document.createElement('div');
+                div.className = 'grid grid-cols-12 gap-3 items-start p-3 bg-slate-950/30 rounded-xl border border-slate-800/60';
+                div.innerHTML = `
+                            <div class="col-span-7">
+                                <input type="text" name="RubricCriteria[${idx}].Description" value="${desc}" placeholder="Descripción del criterio" required
+                                       class="block w-full rounded-xl border border-slate-800/80 bg-slate-950/60 p-2.5 text-xs text-white placeholder:text-dark-muted/50 focus:border-indigo-500/80 focus:ring-4 focus:ring-indigo-500/10 focus:bg-slate-950 transition-all outline-none" />
+                            </div>
+                            <div class="col-span-3">
+                                <div class="relative">
+                                    <input type="number" name="RubricCriteria[${idx}].Weight" value="${weight}" placeholder="Peso" min="0.01" max="100" step="0.01" required
+                                           class="block w-full rounded-xl border border-slate-800/80 bg-slate-950/60 py-2.5 pl-3 pr-8 text-xs text-white focus:border-indigo-500/80 focus:ring-4 focus:ring-indigo-500/10 focus:bg-slate-950 transition-all outline-none" />
+                                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-dark-muted font-mono">%</span>
+                                </div>
+                            </div>
+                            <div class="col-span-2 flex justify-end">
+                                <button type="button" class="btn-remove text-red-400 hover:text-red-300 text-xs px-2 py-1"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        `;
+                div.querySelector('.btn-remove').addEventListener('click', () => { div.remove(); reindex(); updateTotal(); });
+                div.querySelector('input[name$=".Weight"]').addEventListener('input', updateTotal);
+                return div;
+            }
+
+            function reindex() {
+                const rows = container.children;
+                Array.from(rows).forEach((row, i) => {
+                    row.querySelector('input[name$=".Description"]').name = `RubricCriteria[${i}].Description`;
+                    row.querySelector('input[name$=".Weight"]').name = `RubricCriteria[${i}].Weight`;
+                });
+                index = rows.length;
+            }
+
+            document.getElementById('btn-add-criterion').addEventListener('click', () => {
+                container.appendChild(createRow(index, '', ''));
+                index++;
+                updateTotal();
+            });
+
+            document.getElementById('btn-add-criterion').click();
+        })();
+    </script>
+}

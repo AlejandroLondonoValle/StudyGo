@@ -3,62 +3,66 @@
 // ============================================================================
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
-using StudyGo.Hubs;
-using StudyGo.ViewModels;
-using System.Collections.Generic;
+using StudyGo.Services;
+using System;
+using System.Security.Claims;
 using System.Threading.Tasks;
-using StudyGo.ViewModels.Notifications;
 
 namespace StudyGo.Controllers
 {
     [Authorize]
     public class NotificationController : Controller
     {
-        private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly INotificationService _notificationService;
 
-        public NotificationController(IHubContext<NotificationHub> hubContext)
+        public NotificationController(INotificationService notificationService)
         {
-            _hubContext = hubContext;
+            _notificationService = notificationService;
+        }
+
+        private Guid GetCurrentUserId()
+        {
+            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            return Guid.TryParse(userIdString, out Guid userId) ? userId : Guid.Empty;
         }
 
         [HttpGet]
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            var viewModel = new NotificationListViewModel
-            {
-                UnreadCount = 2,
-                Notifications = new List<NotificationItemViewModel>()
-            };
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty) return Challenge();
+
+            var viewModel = await _notificationService.GetNotificationsAsync(userId);
             return View(viewModel);
         }
 
         [HttpGet]
-        public IActionResult GetLatest()
+        public async Task<IActionResult> GetLatest()
         {
-            var latest = new List<object>
-            {
-                new { Id = 1, Type = "info", Message = "Nueva tarea: Algoritmos", TimeRel = "Hace 5m", Link = "/Tasks/1" },
-                new { Id = 2, Type = "success", Message = "Calificación publicada", TimeRel = "Hace 1h", Link = "/Grades" }
-            };
-            return Json(new { unreadCount = 2, data = latest });
+            var userId = GetCurrentUserId();
+            if (userId == Guid.Empty) return Unauthorized();
+
+            var dropdownModel = await _notificationService.GetDropdownAsync(userId);
+            return Json(new { unreadCount = dropdownModel.UnreadCount, items = dropdownModel.Items });
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult MarkAsRead(int id)
+        public async Task<IActionResult> MarkAsRead(Guid id)
         {
+            await _notificationService.MarkAsReadAsync(id);
             return Ok();
         }
 
-        // ============================================================================
-        // ACCIÓN AGREGADA: Maneja el POST del botón "Marcar todas leídas" del Centro de Notificaciones
-        // ============================================================================
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult MarkAllAsRead()
+        public async Task<IActionResult> MarkAllAsRead()
         {
-            // TODO: Agregar aquí la llamada al _notificationService cuando esté mapeado en BD
+            var userId = GetCurrentUserId();
+            if (userId != Guid.Empty)
+            {
+                await _notificationService.MarkAllAsReadAsync(userId);
+            }
             return RedirectToAction(nameof(Index));
         }
     }
